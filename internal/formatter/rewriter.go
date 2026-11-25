@@ -36,11 +36,27 @@ func (s Source) LineStart(line int) int {
 }
 
 func (s Source) Offset(t *token.Token) int {
-	pos := s.LineStart(t.Position.Line)
+	lineStart := s.LineStart(t.Position.Line)
+	pos := lineStart
 	end := s.LineStart(t.Position.Line + 1)
 	for col := 1; col < t.Position.Column && pos < end; col++ {
 		_, width := utf8.DecodeRuneInString(s.Text[pos:end])
 		pos += width
+	}
+	// The lexer can advance a plain scalar's reported start by the
+	// trailing whitespace it discarded before a newline.
+	if t.Type == token.StringType || t.Type == token.BoolType {
+		raw := strings.Trim(t.Origin, " \t\r\n")
+		line := strings.TrimSuffix(s.Text[lineStart:end], "\n")
+		trimmed := strings.TrimRight(line, " \t")
+		trailing := len(line) - len(trimmed)
+		start := pos - trailing
+		if trailing > 0 && raw != "" && !strings.Contains(raw, "\n") &&
+			!strings.HasPrefix(s.Text[pos:end], raw) &&
+			start >= lineStart && start+len(raw) == lineStart+len(trimmed) &&
+			strings.HasSuffix(trimmed, raw) {
+			return start
+		}
 	}
 	return pos
 }

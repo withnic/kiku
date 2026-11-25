@@ -1,0 +1,94 @@
+# .kiku.yaml デフォルト設定
+version: 1
+
+# 検査・修正の対象パス（未指定時はカレントディレクトリ "." 全体を走査）
+include:
+  - .
+
+# 全体除外パターン（グロブ指定 / "re:..." プレフィックスで正規表現指定が可能）
+# デフォルトは以下の3パターン。プロジェクト固有の除外は追加記述する
+ignore:
+  - .git/**
+  - node_modules/**
+  - vendor/**
+  # 記述例:
+  # - "*.generated.yaml"
+  # - "re:^build/.*\\.ya?ml$"
+
+rules:
+  # --- テキスト・ファイル衛生ルール（オンオフ可能） ---
+  encoding:
+    enabled: true
+    forbid_bom: true              # UTF-8 BOM の検知・除去
+    ignore: []                    # ルール固有の除外パターン（デフォルトは空配列）
+
+  line_endings:
+    enabled: true
+    type: lf                    # "lf" | "crlf"
+    ignore: []
+
+  line_length:
+    enabled: true
+    max: 120                      # 1行の最大文字数（ルーン数ベース）
+    ignore_comments: true         # コメント行を文字数制限から除外
+    ignore_urls: true             # http:// または https:// を含む行を除外
+    ignore: []                    # 記述例: ["templates/*.yaml"]
+
+  trailing_whitespace:
+    enabled: true                 # 行末の空白・タブ除去
+    ignore: []
+
+  final_newline:
+    enabled: true                 # ファイル末尾の単一改行を保証
+    ignore: []
+
+  blank_lines:
+    enabled: true
+    max_consecutive: 1            # 連続する空行の最大許容数（0で全空行削除、1で1行まで維持）
+    ignore: []
+
+  # --- YAML スタイル・可読性ルール（オンオフ可能） ---
+  indentation:
+    enabled: true
+    spaces: 2                     # インデント幅（2 または 4 推奨）
+    ignore: []
+
+  sequence_style:
+    enabled: true
+    mode: block                 # "block" | "flow" | "consistent" | "hybrid"
+    allow_empty_flow: true        # block / hybrid / consistent でも空配列 [] を許可する
+    hybrid_max_items: 3           # mode: hybrid 時の最大要素数
+    hybrid_max_line_length: 60    # mode: hybrid 時のフロースタイル最大文字数（スカラー要素のみ対象）
+    ignore: []                    # 記述例: ["docker-compose*.yml", "re:^manifests/legacy/.*$"]
+
+  quotes:
+    enabled: true
+    prefer: double              # "double" | "single"
+    unnecessary: remove         # "remove"（不要なら外す） | "keep"（既存クォート維持）
+    ignore: []
+
+  truthy:
+    enabled: true
+    style: lower                # "lower"（true / false に統一）
+    ignore: []
+
+  null_style:
+    enabled: true
+    style: empty                # "empty"（key:） | "null"（key: null） | "tilde"（key: ~）
+    ignore: []
+
+  comments:
+    enabled: true
+    require_space_after_hash: true  # "#comment" -> "# comment"（"##" 等の装飾連続シャープは保護）
+    min_spaces_from_content: 2    # インラインコメント前の最小スペース数（"val # c" -> "val  # c"）
+    ignore: []
+
+  document_start:
+    enabled: false                # デフォルトオフ
+    present: false                # true: "---" 必須 / false: "---" 禁止
+    ignore: []
+
+  sort_keys:
+    enabled: false                # デフォルトオフ
+    recursive: true               # ネストしたマッピングも再帰ソートするか
+    ignore: []

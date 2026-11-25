@@ -38,6 +38,24 @@ func AtomicWrite(path string, data []byte) error {
 	return os.Rename(file.Name(), path)
 }
 
+// CreateFile writes a new file without replacing an existing entry.
+func CreateFile(path string, data []byte) (err error) {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+		if err != nil {
+			err = errors.Join(err, os.Remove(path))
+		}
+	}()
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+	return file.Sync()
+}
+
 func NormalizePath(path string) string {
 	return strings.ReplaceAll(filepath.ToSlash(path), "\\", "/")
 }
@@ -50,6 +68,13 @@ func RelativePath(base, target string) (string, error) {
 // WalkYAML visits regular YAML files and directly specified regular files.
 // ignored receives native paths so callers can resolve them relative to configuration.
 func WalkYAML(root string, ignored func(string) bool, visit func(string) error) error {
+	return WalkYAMLFiltered(root, func(path string, isDir, isRoot bool) (bool, error) {
+		return ignored != nil && !(isRoot && isDir) && ignored(path), nil
+	}, visit)
+}
+
+// WalkYAMLFiltered lets callers prune directories before reading their entries.
+func WalkYAMLFiltered(root string, ignored func(path string, isDir, isRoot bool) (bool, error), visit func(string) error) error {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return err
@@ -71,20 +96,28 @@ func WalkYAML(root string, ignored func(string) bool, visit func(string) error) 
 		if entry.IsDir() && !info.IsDir() {
 			return filepath.SkipDir
 		}
-		if ignored != nil && !(path == root && info.IsDir()) && ignored(path) {
-			if info.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !info.Mode().IsRegular() {
-			return nil
-		}
+		isDir := info.IsDir()
+		isRoot := path == root
 		ext := strings.ToLower(filepath.Ext(path))
-		if path == root || ext == ".yaml" || ext == ".yml" {
-			return visit(path)
+		if !isDir && (!info.Mode().IsRegular() || (!isRoot && ext != ".yaml" && ext != ".yml")) {
+			return nil
 		}
-		return nil
+		if ignored != nil {
+			skip, err := ignored(path, isDir, isRoot)
+			if err != nil {
+				return err
+			}
+			if skip {
+				if isDir {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
+		if isDir {
+			return nil
+		}
+		return visit(path)
 	})
 }
 

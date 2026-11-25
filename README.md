@@ -1,4 +1,4 @@
-![規矩（kiku） — コメントと空行を完全保持する YAML Linter & Fixer](docs/assets/kiku.jpg)
+![規矩（kiku） — コメントと空行を完全保持する YAML Linter & Fixer](docs/assets/kiku-banner.jpg)
 
 # 規矩（kiku）
 

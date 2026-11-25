@@ -43,6 +43,10 @@ jobs:
       - name: Build and self-check workflows
         shell: bash
         run: |
-          go build -o bin/kiku ./cmd/kiku
-          ./bin/kiku version
-          ./bin/kiku check --format github .github/
+          ext=""
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            ext=".exe"
+          fi
+          go build -o "bin/kiku${ext}" ./cmd/kiku
+          "./bin/kiku${ext}" version
+          "./bin/kiku${ext}" check --format github .github/

@@ -1,0 +1,26 @@
+
+{
+  "context": {
+    "fileName": "AGENTS.md"
+  },
+  "tools": {
+    "exclude": [
+      "run_shell_command(git push*)",
+      "run_shell_command(git reset --hard*)",
+      "run_shell_command(rm -rf /*)"
+    ]
+  },
+  "hooks": {
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+
+            "command": "gofmt -s -w . 1>&2 && go vet ./... 1>&2 && go test -race ./... 1>&2 && go build ./cmd/kiku 1>&2 && rm -f kiku kiku.exe 1>&2 || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

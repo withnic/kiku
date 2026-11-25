@@ -1,0 +1,12 @@
+# follows alpha
+a:
+  - x
+  - y
+
+# follows beta
+b:
+  apple: ok
+  zebra: true
+z: last  # trailing
+---
+third: true

@@ -11,6 +11,15 @@
 - `docs/02_data_modeling.md`
 - `docs/03_architecture.md`
 
+## Phase 2 からの引き継ぎ事項（既存実装の前提）
+Phase 1・2 では以下が実装・検証済み（`go test -race ./...` グリーン、`goimports` / `gofmt -s` 導入済）。既存 API をそのまま活用し、重複実装を避けて Phase 3 を完成させること。
+- **`internal/engine/pipeline.go`**: 単一ファイル処理関数 `Process(path, relativePath string, raw []byte, cfg *config.Resolved, fix bool) ([]byte, []parser.Diagnostic, error)` が実装済み（`parser.Parse` → `rules.Structure` → `rules.Hygiene` → `formatter.VerifyRoundTrip` を実行し、ファイル内診断を行・列・RuleID 昇順にソートして返す）。
+  - **戻り値契約**: Layer 1 エラー（`invalid-utf8`, `no-tabs` check時, `syntax-error`, `key-duplicates`）時は `out == nil, err == nil` で `diagnostics` に `SeverityError` を返す（`fix` 時は元ファイルを絶対に上書きせず終了コード `1`）。`VerifyRoundTrip` 失敗や内部スパンエラー時は `out == nil, err != nil` を返す（元ファイルを上書きせず終了コード `2`）。
+  - Phase 3 の `internal/engine/runner.go` では、この `Process` を `runtime.NumCPU()` 上限のワーカープールで並列実行し、全ファイルの診断結果を「ファイルパス昇順 → 行番号昇順 → 列番号昇順 → RuleID 昇順」に決定論的ソートすること。
+- **`internal/fs/atomic.go`**: `WalkYAML(root, ignored, visit)`（シンボリックリンク非追従・ルートディレクトリ保護・ディレクトリ走査時の `.yaml`/`.yml` フィルタ済）、`AtomicWrite(path, data)`（既存ファイルのパーミッション維持＋一時ファイルアトミック置換）、`NormalizePath`、`RelativePath` を提供。なお `AtomicWrite` は既存ファイル前提（`os.Lstat`）のため、`kiku init` の新規 `.kiku.yaml` 生成には新規作成対応（または専用処理）を用いること。
+- **`internal/config/config.go`**: `NewLoader(cwd, explicit, cliIgnore)` と `(*Loader).Load(dir)`（キャッシュ付親ディレクトリ遡及探索、`--config`、`.kikuignore`、`--ignore` マージ、全バリデーション）および `ErrorExitCode = 2` を提供。対象ファイルごとに `cfg.RelativePath(absPath)` で相対パスを解決し、グローバル `cfg.Matcher.Match(rel)` および `Process` 呼び出しへ渡すこと。
+- **マッピングキー保護**: `truthy` はマッピングのキー（例: `on:`）を対象外とし、`sort-keys` は複数行リテラル値を含むマッピングも安全にソートできる状態になっている。
+
 ## Phase 3 実装タスク
 1. **並列実行エンジン（`internal/engine/runner.go`）の実装**:
    - シンボリックリンク非追従のディレクトリ再帰探索（ディレクトリ走査時は `.yaml` / `.yml` 大文字小文字不問、直接指定ファイルは拡張子不問）、グローバル `ignore`（`.kiku.yaml` / `.kikuignore` / `--ignore` の統合、`filepath.ToSlash` 統一）による除外判定、ワーカープールによる並列ファイル処理、および決定論的ソート（パス → 行 → 列 → RuleID）による診断結果集約を実装する。

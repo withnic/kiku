@@ -1,15 +1,13 @@
 package rules
 
-// Rule identifies a rule and plans its diagnostics and repairs.
+// Rule identifies a configurable Layer 2 style rule.
 type Rule interface {
 	ID() string
-	plan(*hygienePlan)
 }
 
-type hygieneRule struct {
-	id       string
-	evaluate func(*hygienePlan)
+type rule[P any] struct {
+	id   string
+	plan func(*P)
 }
 
-func (r hygieneRule) ID() string          { return r.id }
-func (r hygieneRule) plan(p *hygienePlan) { r.evaluate(p) }
+func (r rule[P]) ID() string { return r.id }

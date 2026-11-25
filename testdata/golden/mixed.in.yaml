@@ -1,0 +1,28 @@
+#header
+items: ['foo', 'yes', '0123', '', " foo ", "x\ty", "a # b", "a: b", "x,y"] #tail
+flags:
+    - YES
+    - False
+    - n
+empty: null #null
+list: []
+literal: |
+  #literal
+
+  same
+
+# kiku:ignore
+ignored:
+    keep: [x, 'y']
+    nested:
+        - TRUE
+        - "unchanged"
+
+# kiku:ignore-section
+paragraph: ['same']
+other: Null
+
+active: [foo, True]
+---
+#end
+value: OFF

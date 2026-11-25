@@ -17,13 +17,13 @@ type HygieneResult struct {
 	Output         []byte
 }
 
-var hygieneRules = []Rule{
-	hygieneRule{"encoding", (*hygienePlan).checkEncoding},
-	hygieneRule{"line-endings", (*hygienePlan).checkLineEndings},
-	hygieneRule{"line-length", (*hygienePlan).checkLineLength},
-	hygieneRule{"trailing-whitespace", (*hygienePlan).checkTrailingWhitespace},
-	hygieneRule{"blank-lines", (*hygienePlan).checkBlankLines},
-	hygieneRule{"final-newline", (*hygienePlan).checkFinalNewline},
+var hygieneRules = []rule[hygienePlan]{
+	{"encoding", (*hygienePlan).checkEncoding},
+	{"line-endings", (*hygienePlan).checkLineEndings},
+	{"line-length", (*hygienePlan).checkLineLength},
+	{"trailing-whitespace", (*hygienePlan).checkTrailingWhitespace},
+	{"blank-lines", (*hygienePlan).checkBlankLines},
+	{"final-newline", (*hygienePlan).checkFinalNewline},
 }
 
 type hygienePlan struct {
@@ -136,7 +136,7 @@ func (p *hygienePlan) trailingBlankStart() int {
 		return start
 	}
 	for i := len(p.doc.Lines) - 1; i > 0; i-- {
-		if strings.Trim(p.doc.Lines[i], " \t") != "" || p.doc.Protected(i+1) || p.doc.IgnoreMap.Ignored("final-newline", i+1) {
+		if strings.Trim(p.doc.Lines[i], " \t") != "" || p.doc.Protected(i+1) || p.doc.IgnoreMap.ParagraphEnd(i+1) || p.doc.IgnoreMap.Ignored("final-newline", i+1) {
 			break
 		}
 		start = i
@@ -155,7 +155,7 @@ func (p *hygienePlan) checkBlankLines() {
 			continue
 		}
 		blankRun++
-		if blankRun > p.settings.BlankLines.MaxConsecutive && !p.ignored(number) {
+		if blankRun > p.settings.BlankLines.MaxConsecutive && !p.ignored(number) && !p.doc.IgnoreMap.ParagraphEnd(number) {
 			p.warn(number, 1, true, "too many consecutive blank lines")
 			p.removed[i] = true
 		}

@@ -8,8 +8,9 @@ import (
 )
 
 type IgnoreMap struct {
-	lines   []map[string]bool
-	control []bool
+	lines        []map[string]bool
+	control      []bool
+	paragraphEnd []bool
 }
 
 func (m *IgnoreMap) Ignored(rule string, line int) bool {
@@ -31,8 +32,13 @@ func (m *IgnoreMap) ControlLine(line int) bool {
 	return m != nil && line >= 1 && line <= len(m.control) && m.control[line-1]
 }
 
+// ParagraphEnd reports a blank line that terminates an ignore section.
+func (m *IgnoreMap) ParagraphEnd(line int) bool {
+	return m != nil && line >= 1 && line <= len(m.paragraphEnd) && m.paragraphEnd[line-1]
+}
+
 func buildIgnoreMap(lines []string, tokens token.Tokens, ends, inlineEnds map[int]int) *IgnoreMap {
-	result := &IgnoreMap{lines: make([]map[string]bool, len(lines)), control: make([]bool, len(lines))}
+	result := &IgnoreMap{lines: make([]map[string]bool, len(lines)), control: make([]bool, len(lines)), paragraphEnd: make([]bool, len(lines))}
 	type directive struct {
 		action string
 		rules  []string
@@ -124,7 +130,11 @@ func buildIgnoreMap(lines []string, tokens token.Tokens, ends, inlineEnds map[in
 			end := line
 			for end < len(lines) {
 				next := lines[end]
-				if strings.TrimSpace(next) == "" || documentBoundary(next) {
+				if strings.TrimSpace(next) == "" {
+					result.paragraphEnd[end] = true
+					break
+				}
+				if documentBoundary(next) {
 					break
 				}
 				end++

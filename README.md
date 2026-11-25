@@ -1,3 +1,5 @@
+![規矩（kiku） — コメントと空行を完全保持する YAML Linter & Fixer](docs/assets/kiku.jpg)
+
 # 規矩（kiku）
 
 **コメントと意図的な空行を完全に保持したまま** YAML の構文検証（Lint）と人間が読みやすい形式への自動整形（Fix）を行う、Go 製の単一バイナリ CLI ツールです。

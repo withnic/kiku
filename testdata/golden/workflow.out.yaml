@@ -1,0 +1,44 @@
+## === CI Workflow ===
+name: ci
+on:
+  push:
+    branches: [main, release]  # kiku:ignore sequence-style -- keep compact
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+env:
+  APP_PORT: "08080"
+  DRY_RUN: "yes"
+  FEATURE_FLAG: true
+  EMPTY_VAL:  # inline note
+  OPTIONAL_LIST: []
+
+# kiku:ignore
+legacy_block:
+    flags: [YES, 'kept']
+    nested:
+        mode: OFF
+
+# kiku:ignore-section
+section_a: ['one']
+section_b: Null
+
+# kiku:disable quotes, truthy
+disabled_a: 'keep_me'
+disabled_b: ON
+# kiku:enable quotes, truthy
+re_enabled: remove_me
+re_flag: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run checks
+        run: |
+          # inside literal comment
+          echo "hello"  
+
+          go test ./...

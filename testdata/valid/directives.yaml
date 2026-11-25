@@ -1,0 +1,15 @@
+# Inline, block, paragraph, and range directives
+inline: [a, b]  # kiku:ignore sequence-style -- compact
+
+# kiku:ignore
+block_skip:
+    nested: [YES, 'keep']
+
+# kiku:ignore-section
+section_one: ['stay']
+section_two: OFF
+
+# kiku:disable quotes
+range_val: 'stay_quoted'
+# kiku:enable quotes
+clean: ok

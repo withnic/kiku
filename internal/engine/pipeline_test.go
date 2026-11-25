@@ -18,9 +18,12 @@ func TestGolden(t *testing.T) {
 		name := strings.TrimSuffix(filepath.Base(file), ".in.yaml")
 		t.Run(name, func(t *testing.T) {
 			cfg := config.Defaults()
-			if name == "sort" {
+			switch name {
+			case "sort":
 				cfg.Rules.SortKeys.Enabled = true
 				cfg.Rules.DocumentStart.Enabled = true
+			case "hybrid":
+				cfg.Rules.SequenceStyle.Mode = "hybrid"
 			}
 			input, err := os.ReadFile(file)
 			if err != nil {
@@ -209,4 +212,70 @@ func TestEmptyNullInBlockMappingOnly(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Rules.SequenceStyle.Enabled = false
 	assertFix(t, cfg, []byte("key:\n  Null\nflow: {value: null}\nseq:\n  - null\n"), []byte("key:\nflow: {value: null}\nseq:\n  - null\n"))
+}
+
+func TestValidFixtures(t *testing.T) {
+	files, err := filepath.Glob("../../testdata/valid/*.yaml")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("valid fixtures: %v", err)
+	}
+	resolved, err := config.Resolve(config.Defaults(), t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			input, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, diags, err := Process(file, filepath.Base(file), input, resolved, false)
+			if err != nil || len(diags) != 0 {
+				t.Fatalf("check failed: err=%v, diagnostics=%+v", err, diags)
+			}
+			out, diags, err := Process(file, filepath.Base(file), input, resolved, true)
+			if err != nil || len(diags) != 0 || string(out) != string(input) {
+				t.Fatalf("fix altered valid fixture: err=%v, diagnostics=%+v\noutput:\n%s", err, diags, out)
+			}
+		})
+	}
+}
+
+func TestInvalidFixtures(t *testing.T) {
+	resolved, err := config.Resolve(config.Defaults(), t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		file       string
+		wantRule   string
+		fixRescues bool
+	}{
+		{"duplicate_keys.yaml", "key-duplicates", false},
+		{"syntax_error.yaml", "syntax-error", false},
+		{"tabs.yaml", "no-tabs", true},
+	} {
+		t.Run(tc.file, func(t *testing.T) {
+			path := filepath.Join("../../testdata/invalid", tc.file)
+			input, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, diags, err := Process(path, tc.file, input, resolved, false)
+			if err != nil || out != nil || len(diags) == 0 || diags[0].RuleID != tc.wantRule {
+				t.Fatalf("check = (out=%v, diags=%+v, err=%v), want rule %s", out != nil, diags, err, tc.wantRule)
+			}
+			fixed, fixDiags, fixErr := Process(path, tc.file, input, resolved, true)
+			if fixErr != nil {
+				t.Fatalf("fix returned unexpected error: %v", fixErr)
+			}
+			if tc.fixRescues {
+				if string(fixed) != "root:\n  child: value\n" {
+					t.Fatalf("rescued tabs = %q", fixed)
+				}
+			} else if fixed != nil || len(fixDiags) == 0 || fixDiags[0].RuleID != tc.wantRule {
+				t.Fatalf("unfixable Layer 1 must return nil output: fixed=%q, diags=%+v", fixed, fixDiags)
+			}
+		})
+	}
 }

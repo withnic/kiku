@@ -1,0 +1,22 @@
+## === Complex Valid Document ===
+on:
+  push:
+    branches:
+      - main
+
+metadata:
+  code: "0123"
+  label: "yes"
+  note: "a: b"
+  empty:  # intentionally empty
+  tags: []
+
+script: |
+  # literal comment without space is fine
+  echo "hello"  
+
+  echo "done"
+---
+# Second document
+enabled: true
+disabled: false

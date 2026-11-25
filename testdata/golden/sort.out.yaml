@@ -7,6 +7,13 @@ a:
 b:
   apple: ok
   zebra: true
+# follows script
+script: |
+  # keep literal comment
+  echo "hi"
+
+  exit 0
+
 z: last  # trailing
 ---
 third: true

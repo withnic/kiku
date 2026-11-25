@@ -18,7 +18,7 @@ Phase 1・2 では以下が実装・検証済み（`go test -race ./...` グリ�
   - Phase 3 の `internal/engine/runner.go` では、この `Process` を `runtime.NumCPU()` 上限のワーカープールで並列実行し、全ファイルの診断結果を「ファイルパス昇順 → 行番号昇順 → 列番号昇順 → RuleID 昇順」に決定論的ソートすること。
 - **`internal/fs/atomic.go`**: `WalkYAML(root, ignored, visit)`（シンボリックリンク非追従・ルートディレクトリ保護・ディレクトリ走査時の `.yaml`/`.yml` フィルタ済）、`AtomicWrite(path, data)`（既存ファイルのパーミッション維持＋一時ファイルアトミック置換）、`NormalizePath`、`RelativePath` を提供。なお `AtomicWrite` は既存ファイル前提（`os.Lstat`）のため、`kiku init` の新規 `.kiku.yaml` 生成には新規作成対応（または専用処理）を用いること。
 - **`internal/config/config.go`**: `NewLoader(cwd, explicit, cliIgnore)` と `(*Loader).Load(dir)`（キャッシュ付親ディレクトリ遡及探索、`--config`、`.kikuignore`、`--ignore` マージ、全バリデーション）および `ErrorExitCode = 2` を提供。対象ファイルごとに `cfg.RelativePath(absPath)` で相対パスを解決し、グローバル `cfg.Matcher.Match(rel)` および `Process` 呼び出しへ渡すこと。
-- **マッピングキー保護**: `truthy` はマッピングのキー（例: `on:`）を対象外とし、`sort-keys` は複数行リテラル値を含むマッピングも安全にソートできる状態になっている。
+- **マッピングキー保護・テストフィクスチャ**: `truthy` はマッピングのキー（例: `on:`）を対象外とし、`sort-keys` は複数行リテラル値を含むマッピングも安全にソートできる状態になっている。また、`testdata/golden/`（`mixed`, `sort`, `workflow`, `hybrid`）、`testdata/valid/`（`complex.yaml`, `directives.yaml`）、`testdata/invalid/`（`duplicate_keys.yaml`, `syntax_error.yaml`, `tabs.yaml`）に実戦フィクスチャが整備済みなので、Phase 3 の E2E テストでも活用できる。
 
 ## Phase 3 実装タスク
 1. **並列実行エンジン（`internal/engine/runner.go`）の実装**:

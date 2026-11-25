@@ -1,0 +1,11 @@
+short_block:
+  - alpha
+  - beta
+  - gamma
+too_many: [a, b, c, d]
+too_long: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]
+nested_items: [[a, b], [c, d]]
+with_comment:
+  - first # keep block
+  - second
+empty_list: []

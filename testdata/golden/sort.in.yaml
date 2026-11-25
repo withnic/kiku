@@ -1,6 +1,13 @@
 ---
 z: last # trailing
 
+# follows script
+script: |
+  # keep literal comment
+  echo "hi"
+
+  exit 0
+
 # follows beta
 b:
   zebra: yes

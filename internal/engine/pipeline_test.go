@@ -155,6 +155,40 @@ func TestMultibyteEdgeCases(t *testing.T) {
 			[]byte("items: [\"\\x07bell\", \"line\\u2028sep\", \"\\U0001F680\"]\n"),
 			[]byte("items:\n  - \"\\x07bell\"\n  - \"line\\u2028sep\"\n  - 🚀\n"))
 	})
+	t.Run("tricky Japanese and Unicode sequences keep exact offsets", func(t *testing.T) {
+		cfg := config.Defaults()
+		input := strings.Join([]string{
+			"ダメ文字: '表ソ能構噂' #注釈",
+			"サロゲート漢字: ['𠮷野家', '𠮟る'] #𠮷",
+			"結合文字: ['が', 'か\u3099'] #NFD保持",
+			"異体字: '葛\U000E0100飾' #IVS",
+			"ZWJ絵文字: ['👨\u200d👩\u200d👧\u200d👦', '🇯🇵'] #絵文字",
+			"波ダッシュ: ['〜', '～'] #区別",
+			"特殊空白: \"\u00a0NBSP\u00a0\"",
+			"真偽: YES",
+			"",
+		}, "\n")
+		want := strings.Join([]string{
+			"ダメ文字: 表ソ能構噂  # 注釈",
+			"サロゲート漢字:",
+			"  - 𠮷野家",
+			"  - 𠮟る  # 𠮷",
+			"結合文字:",
+			"  - が",
+			"  - か\u3099  # NFD保持",
+			"異体字: 葛\U000E0100飾  # IVS",
+			"ZWJ絵文字:",
+			"  - 👨\u200d👩\u200d👧\u200d👦",
+			"  - 🇯🇵  # 絵文字",
+			"波ダッシュ:",
+			"  - 〜",
+			"  - ～  # 区別",
+			"特殊空白: \"\u00a0NBSP\u00a0\"",
+			"真偽: true",
+			"",
+		}, "\n")
+		assertFix(t, cfg, []byte(input), []byte(want))
+	})
 }
 
 func TestConsistentFlowAllowsEmptySequence(t *testing.T) {

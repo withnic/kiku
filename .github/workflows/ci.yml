@@ -1,3 +1,4 @@
+# Cross-platform CI for kiku (Linux / macOS / Windows)
 name: ci
 
 on:
@@ -10,7 +11,7 @@ on:
 jobs:
   test:
     strategy:
-      fail-fast: false
+      fail-fast: false  # Report results for all OS targets
       matrix:
         os:
           - ubuntu-latest
@@ -40,6 +41,7 @@ jobs:
       - name: Test with race detector
         run: go test -v -race ./...
 
+      # Build the CLI and dogfood kiku against its own workflow files
       - name: Build and self-check workflows
         shell: bash
         run: |

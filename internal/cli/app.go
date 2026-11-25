@@ -16,6 +16,9 @@ import (
 	"github.com/withnic/kiku/internal/parser"
 )
 
+// Version is overridden at build time via -ldflags for tagged releases.
+var Version = "v0.1.0"
+
 //go:embed default.kiku.yaml
 var defaultConfig []byte
 
@@ -42,7 +45,7 @@ func run(args []string, stdout, stderr io.Writer) (int, error) {
 		if len(args) != 1 {
 			return 0, errors.New("version takes no arguments")
 		}
-		_, err := fmt.Fprintln(stdout, "kiku v0.1.0")
+		_, err := fmt.Fprintf(stdout, "kiku %s\n", Version)
 		return 0, err
 	case "init", "check", "fix":
 		return runCommand(command, args[1:], stdout, stderr)

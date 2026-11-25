@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Run tests
+        run: go test -race ./...
+
+      - name: Build release archives
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist
+          targets=(
+            "linux amd64"
+            "linux arm64"
+            "darwin amd64"
+            "darwin arm64"
+            "windows amd64"
+            "windows arm64"
+          )
+          for target in "${targets[@]}"; do
+            read -r goos goarch <<< "$target"
+            ext=""
+            if [ "$goos" = "windows" ]; then
+              ext=".exe"
+            fi
+            out="dist/kiku_${VERSION}_${goos}_${goarch}"
+            mkdir -p "$out"
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+              go build -trimpath \
+                -ldflags "-s -w -X github.com/withnic/kiku/internal/cli.Version=${VERSION}" \
+                -o "${out}/kiku${ext}" ./cmd/kiku
+            cp README.md LICENSE "$out/"
+            if [ "$goos" = "windows" ]; then
+              (cd dist && zip -rq "kiku_${VERSION}_${goos}_${goarch}.zip" "kiku_${VERSION}_${goos}_${goarch}")
+            else
+              tar -C dist -czf "dist/kiku_${VERSION}_${goos}_${goarch}.tar.gz" "kiku_${VERSION}_${goos}_${goarch}"
+            fi
+            rm -rf "$out"
+          done
+          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/checksums.txt \
+            --title "kiku ${GITHUB_REF_NAME}" \
+            --generate-notes

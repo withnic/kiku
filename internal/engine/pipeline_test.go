@@ -124,6 +124,39 @@ func TestSortKeysWithMultilineLiteral(t *testing.T) {
 	assertFix(t, cfg, []byte("z: |\n  line1\n  line2\na: 1\n"), []byte("a: 1\nz: |\n  line1\n  line2\n"))
 }
 
+func TestMultibyteEdgeCases(t *testing.T) {
+	t.Run("hybrid length counts runes not bytes", func(t *testing.T) {
+		cfg := config.Defaults()
+		cfg.Rules.SequenceStyle.Mode = "hybrid"
+		cfg.Rules.SequenceStyle.HybridMaxLineLength = 20
+		// "[あいうえお, かきくけこ]" is 14 runes (36 bytes > 20 bytes), so hybrid must keep flow.
+		assertFix(t, cfg, []byte("言葉:\n  - あいうえお\n  - かきくけこ\n"), []byte("言葉: [あいうえお, かきくけこ]\n"))
+	})
+	t.Run("sort Japanese keys with comments and emoji", func(t *testing.T) {
+		cfg := config.Defaults()
+		cfg.Rules.SortKeys.Enabled = true
+		input := "# 最後のメモ\nん: '終' #🚀\n# 最初のメモ\nあ: |\n  日本語\n"
+		want := "# 最初のメモ\nあ: |\n  日本語\n# 最後のメモ\nん: 終  # 🚀\n"
+		assertFix(t, cfg, []byte(input), []byte(want))
+	})
+	t.Run("flow sequence quotes Japanese value with flow indicators", func(t *testing.T) {
+		cfg := config.Defaults()
+		cfg.Rules.SequenceStyle.Mode = "flow"
+		assertFix(t, cfg, []byte("記号:\n  - 日本語,区切り\n  - 絵文字🚀\n"), []byte("記号: [\"日本語,区切り\", 絵文字🚀]\n"))
+	})
+	t.Run("single quote preference preserves unicode and escapes", func(t *testing.T) {
+		cfg := config.Defaults()
+		cfg.Rules.Quotes.Prefer = "single"
+		assertFix(t, cfg, []byte("文字: \"日本語: '引用'\"\n制御: \"🚀\\n次行\"\n"), []byte("文字: '日本語: ''引用'''\n制御: \"🚀\\n次行\"\n"))
+	})
+	t.Run("unicode hex escapes in flow sequence convert cleanly", func(t *testing.T) {
+		cfg := config.Defaults()
+		assertFix(t, cfg,
+			[]byte("items: [\"\\x07bell\", \"line\\u2028sep\", \"\\U0001F680\"]\n"),
+			[]byte("items:\n  - \"\\x07bell\"\n  - \"line\\u2028sep\"\n  - 🚀\n"))
+	})
+}
+
 func TestConsistentFlowAllowsEmptySequence(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Rules.SequenceStyle.Mode = "consistent"

@@ -45,11 +45,33 @@ func (s Source) Offset(t *token.Token) int {
 	return pos
 }
 
-// TokenEnd uses Origin for scalar spelling, including escaped quote content.
+// TokenEnd locates the byte end of t in normalized source. Quoted tokens are
+// scanned directly because go-yaml omits hex digits from Origin for \x/\u/\U escapes.
 func (s Source) TokenEnd(t *token.Token) int {
 	start := s.Offset(t)
 	if t.Type == token.ImplicitNullType {
 		return start
+	}
+	if t.Type == token.DoubleQuoteType && start < len(s.Text) && s.Text[start] == '"' {
+		for i := start + 1; i < len(s.Text); i++ {
+			switch s.Text[i] {
+			case '\\':
+				i++
+			case '"':
+				return i + 1
+			}
+		}
+	}
+	if t.Type == token.SingleQuoteType && start < len(s.Text) && s.Text[start] == '\'' {
+		for i := start + 1; i < len(s.Text); i++ {
+			if s.Text[i] == '\'' {
+				if i+1 < len(s.Text) && s.Text[i+1] == '\'' {
+					i++
+					continue
+				}
+				return i + 1
+			}
+		}
 	}
 	raw := strings.Trim(t.Origin, " \t\n\r")
 	if raw != "" && strings.HasPrefix(s.Text[start:], raw) {
